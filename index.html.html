@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>品牌活動 - 數位抽獎管理系統</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .gold-border { border: 1px solid rgba(196, 160, 82, 0.3); }
+        .gold-text { color: #c4a052; }
+        .gold-bg { background-color: #c4a052; }
+        .rolling-container { mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        .animate-fadeIn { animation: fadeIn 0.8s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .hero-gradient {
+            background: linear-gradient(to top, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
+            height: 30%;
+            bottom: 0;
+            top: auto;
+        }
+        
+        .text-3d {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3), 
+                         0px 0px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .dot { transition: all 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="antialiased overflow-x-hidden">
+    <div id="app" class="min-h-screen flex flex-col">
+        
+        <!-- 導覽列 -->
+        <nav v-if="!['home', 'draw'].includes(currentTab)" class="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button @click="currentTab = 'home'" class="w-10 h-10 gold-bg rounded-lg flex items-center justify-center hover:scale-105 transition-transform">
+                        <svg class="w-6 h-6 text-slate-900" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 00-1.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011-1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
+                    </button>
+                    <div>
+                        <h1 class="text-xl font-medium tracking-wider text-white">{{ systemTitle }}</h1>
+                    </div>
+                </div>
+                <div class="flex space-x-8 text-sm tracking-widest font-light">
+                    <button @click="currentTab = 'setup'" :class="currentTab === 'setup' ? 'gold-text border-b border-[#c4a052]' : 'text-slate-400'">名單配置</button>
+                    <button @click="currentTab = 'prizes'" :class="currentTab === 'prizes' ? 'gold-text border-b border-[#c4a052]' : 'text-slate-400'">獎項管理</button>
+                    <button @click="currentTab = 'result'" :class="currentTab === 'result' ? 'gold-text border-b border-[#c4a052]' : 'text-slate-400'">中獎名單</button>
+                    <button @click="currentTab = 'manual'" :class="currentTab === 'manual' ? 'gold-text border-b border-[#c4a052]' : 'text-slate-400'">操作手冊</button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="flex-grow flex flex-col">
+            
+            <!-- Tab: 首頁 -->
+            <section v-if="currentTab === 'home'" class="relative h-screen w-full flex items-center justify-center overflow-hidden animate-fadeIn">
+                <div class="absolute inset-0 z-0">
+                    <img :src="homeConfig.bgUrl" @error="homeConfig.bgUrl = 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&q=80&w=2070'" class="w-full h-full object-cover brightness-[0.8]" alt="Event Visual">
+                    <div class="absolute inset-x-0 hero-gradient"></div>
+                </div>
+
+                <div class="relative z-10 text-center px-6 max-w-4xl">
+                    <div class="mb-8 inline-block px-6 py-2 border border-current text-base font-bold tracking-[0.4em] uppercase animate-float text-3d rounded-sm"
+                         :style="{ color: homeConfig.subtitleColor }">
+                        {{ homeConfig.subtitle }}
+                    </div>
+                    
+                    <h1 class="text-4xl md:text-6xl font-bold mb-12 tracking-widest leading-tight text-3d"
+                        :style="{ color: homeConfig.mainTitleColor }">
+                        {{ homeConfig.mainTitle }}
+                    </h1>
+                    
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-6 mt-12">
+                        <button @click="currentTab = 'draw'" class="px-14 py-4 gold-bg text-slate-900 font-bold text-xl rounded-full hover:scale-105 transition-all shadow-2xl border-2 border-white/20">
+                            立即開獎
+                        </button>
+                        <button @click="currentTab = 'setup'" class="text-white hover:text-[#c4a052] text-sm tracking-[0.3em] font-medium transition-colors text-3d uppercase">
+                            後台配置
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: 現場抽獎 -->
+            <section v-if="currentTab === 'draw'" class="fixed inset-0 z-[60] bg-[#0f172a] flex flex-col items-center justify-center animate-fadeIn p-10 overflow-hidden">
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(196,160,82,0.1),transparent_70%)] pointer-events-none"></div>
+
+                <button @click="handleBack" class="absolute top-8 left-8 text-slate-700 hover:text-slate-400 transition-colors z-[70] flex items-center text-xs tracking-widest">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    {{ currentPrize ? '回到上一頁' : '返回主選單' }}
+                </button>
+
+                <div v-if="!currentPrize" class="text-center relative z-10 w-full max-w-6xl">
+                    <h2 class="text-4xl text-slate-300 mb-20 font-light tracking-[0.5em] uppercase text-3d">請選擇欲抽獎項目</h2>
+                    <div class="flex flex-wrap justify-center gap-8 mb-24">
+                        <button v-for="prize in prizes" :key="prize.id" @click="selectPrize(prize)" class="group px-12 py-10 bg-slate-900/60 border border-slate-800 hover:border-[#c4a052] rounded-3xl transition-all hover:scale-105 shadow-2xl min-w-[280px]">
+                            <span class="block text-3xl font-medium group-hover:gold-text tracking-wider text-white mb-4">{{ prize.name }}</span>
+                            <div class="text-slate-500 text-sm italic tracking-widest">
+                                總名額：{{ prize.count }} 位
+                            </div>
+                        </button>
+                    </div>
+                    <div class="flex justify-center mt-10">
+                        <button @click="isAllPrizesFinished ? currentTab = 'result' : null" :class="isAllPrizesFinished ? 'gold-bg text-slate-900 hover:scale-105' : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'" class="px-10 py-4 rounded-full text-lg font-bold tracking-widest transition-all shadow-xl">
+                            {{ isAllPrizesFinished ? '檢視中獎名單' : '獎項抽取中...' }}
+                        </button>
+                    </div>
+                </div>
+
+                <div v-else class="w-full max-w-4xl flex flex-col items-center relative z-10">
+                    <div class="text-center mb-16">
+                        <h3 class="text-6xl font-bold gold-text tracking-[0.3em] mb-4 text-3d">{{ currentPrize.name }}</h3>
+                        <p class="text-slate-500 text-lg tracking-widest italic">剩餘名額：{{ currentPrize.count - getPrizeWinnerCount(currentPrize.name) }} / 總名額：{{ currentPrize.count }}</p>
+                    </div>
+                    <div class="relative w-full max-w-xl h-56 bg-slate-950 rounded-[40px] gold-border shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden rolling-container">
+                        <div class="absolute w-full" :style="{ transform: `translateY(-${rollingOffset}px)`, transition: isRolling ? 'none' : 'transform 1s cubic-bezier(0.16, 1, 0.3, 1)' }">
+                            <div v-for="(name, idx) in rollingDisplay" :key="idx" class="h-56 flex items-center justify-center text-5xl md:text-7xl font-light tracking-[0.4em] text-white px-4 text-center">
+                                {{ name }}
+                            </div>
+                        </div>
+                        <div class="absolute inset-0 pointer-events-none bg-gradient-to-b from-slate-950/80 via-transparent to-slate-950/80"></div>
+                        <div class="absolute inset-x-10 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-[#c4a052]/40 to-transparent"></div>
+                    </div>
+                    <div class="mt-20 flex flex-col items-center gap-6">
+                        <button @click="startAutoDraw" :disabled="isRolling || isPrizeFinished" class="px-24 py-8 gold-bg text-slate-900 rounded-full font-bold text-3xl hover:scale-105 active:scale-95 transition-all shadow-2xl disabled:opacity-30 disabled:cursor-not-allowed">
+                            {{ isPrizeFinished ? '名額已抽完' : (isRolling ? '開獎中...' : (currentPrize.oneClickDraw ? '一鍵開獎' : '開始抽獎')) }}
+                        </button>
+                    </div>
+                    <div class="mt-20 w-full flex flex-wrap justify-center gap-4">
+                        <div v-for="winner in winnersOfCurrentPrize" :key="winner.time" class="bg-slate-900/80 px-8 py-4 rounded-2xl text-center border border-slate-800 animate-fadeIn">
+                            <p class="font-medium text-slate-200 tracking-widest text-xl">{{ winner.name }}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: 名單配置 -->
+            <section v-if="currentTab === 'setup'" class="max-w-7xl mx-auto px-6 py-10 w-full space-y-8 animate-fadeIn">
+                <div class="bg-slate-900/40 p-8 rounded-2xl gold-border">
+                    <h2 class="text-lg font-medium mb-6 flex items-center text-white"><span class="w-1 h-6 gold-bg mr-3"></span>首頁視覺與標題設定</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-xs text-slate-500 block mb-2">主視覺圖檔 URL</label>
+                                <input v-model="homeConfig.bgUrl" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 focus:border-[#c4a052] outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-500 block mb-2">大標題</label>
+                                <div class="flex gap-2">
+                                    <input v-model="homeConfig.mainTitle" class="flex-grow bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-sm text-slate-200">
+                                    <input type="color" v-model="homeConfig.mainTitleColor" class="w-12 h-12 bg-slate-800/50 border border-slate-700 rounded-xl p-1">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-xs text-slate-500 block mb-2">小標題</label>
+                                <div class="flex gap-2">
+                                    <input v-model="homeConfig.subtitle" class="flex-grow bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-sm text-slate-200">
+                                    <input type="color" v-model="homeConfig.subtitleColor" class="w-12 h-12 bg-slate-800/50 border border-slate-700 rounded-xl p-1">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-500 block mb-2">系統名稱</label>
+                                <input v-model="systemTitle" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-sm text-slate-200">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-slate-900/40 p-8 rounded-2xl gold-border">
+                        <h2 class="text-lg font-medium flex items-center text-white mb-6"><span class="w-1 h-6 gold-bg mr-3"></span>導入抽獎名單</h2>
+                        <textarea v-model="rawInput" placeholder="請直接貼上姓名名單，每一行一筆..." class="w-full h-64 bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-slate-200 focus:outline-none focus:border-[#c4a052] transition-colors"></textarea>
+                        <div class="mt-6 flex gap-4">
+                            <button @click="processInput" class="px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-all text-white font-medium">匯入名單</button>
+                            <button @click="loadMockData" class="px-6 py-2 border border-slate-700 hover:border-slate-500 rounded-lg text-sm transition-all text-slate-400">載入測試數據</button>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/40 p-8 rounded-2xl gold-border flex flex-col">
+                        <h2 class="text-lg font-medium text-white mb-6">參與人員 ({{ participants.length }})</h2>
+                        <div class="flex gap-2 mb-4">
+                            <button v-if="participants.length > 0" @click="resetParticipants" class="text-xs border border-slate-600 text-slate-400 px-3 py-1 rounded hover:bg-slate-800 transition-colors">
+                                清空
+                            </button>
+                            <button v-if="hasDuplicates" @click="clearDuplicates" class="text-xs bg-red-950/40 text-red-400 border border-red-900/50 px-3 py-1 rounded hover:bg-red-900/60 transition-colors">
+                                改為單一中獎(去重)
+                            </button>
+                        </div>
+                        <div class="h-64 overflow-y-auto pr-2 custom-scrollbar">
+                            <ul class="space-y-2">
+                                <li v-for="(person, index) in participants" :key="index" class="flex justify-between items-center p-3 rounded-lg text-sm bg-slate-800/30">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-slate-200">{{ person.name }}</span>
+                                        <span v-if="person.weight > 1" class="text-[10px] gold-bg text-slate-900 px-1.5 rounded-full font-bold">×{{ person.weight }}</span>
+                                    </div>
+                                    <button @click="removePerson(index)" class="text-slate-500 hover:text-red-400">×</button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 獎項管理 -->
+            <section v-if="currentTab === 'prizes'" class="max-w-7xl mx-auto px-6 py-10 w-full space-y-8 animate-fadeIn">
+                <div class="bg-slate-900/40 p-8 rounded-2xl gold-border">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-lg font-medium text-white">獎項配置</h2>
+                        <button @click="addPrize" class="px-6 py-2 gold-bg text-slate-900 rounded-lg text-sm font-bold shadow-lg">+ 新增獎項</button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div v-for="(prize, index) in prizes" :key="prize.id" class="bg-slate-800/40 p-6 rounded-2xl border border-slate-700 relative group">
+                            <button v-if="prizes.length > 1" @click="removePrize(index)" class="absolute top-4 right-4 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                            <input v-model="prize.name" class="bg-transparent text-xl font-bold gold-text border-b border-slate-700 focus:border-[#c4a052] outline-none mb-6 w-full py-1">
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-slate-300">中獎人數</span>
+                                    <input type="number" v-model.number="prize.count" min="1" class="w-16 bg-slate-900 border border-slate-700 rounded-lg p-2 text-center text-sm text-white">
+                                </div>
+                                <div class="pt-4 border-t border-slate-800 space-y-4">
+                                    <div class="flex items-center justify-between cursor-pointer" @click="prize.excludeWinners = !prize.excludeWinners">
+                                        <span class="text-xs text-slate-400">排除全場已得獎者</span>
+                                        <div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                                            <div class="block bg-slate-700 w-10 h-5 rounded-full border border-slate-600"></div>
+                                            <div class="dot absolute left-1 top-1 bg-slate-400 w-3 h-3 rounded-full transition" :class="{'translate-x-5 !bg-[#c4a052]': prize.excludeWinners}"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between cursor-pointer" @click="prize.useWeight = !prize.useWeight">
+                                        <span class="text-xs text-slate-400">啟用權重邏輯</span>
+                                        <div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                                            <div class="block bg-slate-700 w-10 h-5 rounded-full border border-slate-600"></div>
+                                            <div class="dot absolute left-1 top-1 bg-slate-400 w-3 h-3 rounded-full transition" :class="{'translate-x-5 !bg-[#c4a052]': prize.useWeight}"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between cursor-pointer" @click="prize.oneClickDraw = !prize.oneClickDraw">
+                                        <span class="text-xs text-slate-400">一鍵抽出所有名單</span>
+                                        <div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                                            <div class="block bg-slate-700 w-10 h-5 rounded-full border border-slate-600"></div>
+                                            <div class="dot absolute left-1 top-1 bg-slate-400 w-3 h-3 rounded-full transition" :class="{'translate-x-5 !bg-[#c4a052]': prize.oneClickDraw}"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 中獎名單 -->
+            <section v-if="currentTab === 'result'" class="max-w-7xl mx-auto px-6 py-10 w-full animate-fadeIn">
+                <div class="bg-slate-900/40 p-8 rounded-2xl gold-border">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-lg font-medium text-white">中獎紀錄總覽</h2>
+                        <div class="flex gap-4">
+                            <button @click="clearAllWinners" v-if="allWinners.length > 0" class="px-6 py-2 border border-red-900/50 text-red-400 rounded-lg text-sm hover:bg-red-900/60 transition-all">清除名單</button>
+                            <button @click="exportCSV" class="px-6 py-2 border border-[#c4a052] gold-text rounded-lg text-sm hover:bg-[#c4a052] hover:text-slate-900 transition-all">導出報表</button>
+                        </div>
+                    </div>
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-slate-400 border-b border-slate-800">
+                            <tr><th class="py-4 px-6 font-medium">時間</th><th class="py-4 px-6 font-medium">獎項</th><th class="py-4 px-6 font-medium">獲獎人</th></tr>
+                        </thead>
+                        <tbody class="text-slate-200">
+                            <tr v-for="winner in allWinners" :key="winner.time" class="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors">
+                                <td class="py-4 px-6 text-slate-500 font-mono text-xs">{{ formatTime(winner.time) }}</td>
+                                <td class="py-4 px-6 gold-text">{{ winner.prize }}</td>
+                                <td class="py-4 px-6">{{ winner.name }}</td>
+                            </tr>
+                            <tr v-if="allWinners.length === 0">
+                                <td colspan="3" class="py-20 text-center text-slate-500 italic">目前尚無中獎紀錄</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 操作手冊 -->
+            <section v-if="currentTab === 'manual'" class="max-w-4xl mx-auto px-6 py-10 w-full animate-fadeIn space-y-12 pb-20">
+                <div class="bg-slate-900/40 p-10 rounded-3xl gold-border">
+                    <h2 class="text-3xl font-bold gold-text mb-10 tracking-wider border-b border-slate-800 pb-6">系統操作手冊</h2>
+                    
+                    <div class="space-y-12">
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold text-white flex items-center bg-slate-800/50 p-3 rounded-lg">
+                                <span class="w-1.5 h-6 gold-bg mr-4"></span> 一、基本設定說明
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pl-2">
+                                <div class="space-y-2">
+                                    <h4 class="gold-text font-medium text-lg">首頁圖檔設定</h4>
+                                    <ul class="text-sm text-slate-400 space-y-2 list-disc pl-5">
+                                        <li>首頁圖片須先上傳至圖床，並貼上圖片 URL</li>
+                                        <li>建議圖片比例為 16:9，解析度 3840 × 2160 px</li>
+                                        <li>重要視覺內容請保留 15–20% 邊界空間</li>
+                                    </ul>
+                                </div>
+                                <div class="space-y-2">
+                                    <h4 class="gold-text font-medium text-lg">抽獎名單筆數限制</h4>
+                                    <ul class="text-sm text-slate-400 space-y-2 list-disc pl-5">
+                                        <li>建議名單筆數不超過 10,000 筆</li>
+                                        <li>超過上限可能導致系統運算延遲</li>
+                                        <li>權重值上限為 100（系統自動限制）</li>
+                                    </ul>
+                                </div>
+                                <div class="space-y-2">
+                                    <h4 class="gold-text font-medium text-lg text-red-400">資料保存機制提醒</h4>
+                                    <ul class="text-sm text-slate-400 space-y-2 list-disc pl-5">
+                                        <li>所有資料僅暫存於瀏覽器記憶體中</li>
+                                        <li>頁面重新整理即會全部重置</li>
+                                        <li>請務必於抽獎完成後立即匯出報表</li>
+                                        <li>系統不提供雲端備份或歷史紀錄</li>
+                                    </ul>
+                                </div>
+                                <div class="space-y-2">
+                                    <h4 class="gold-text font-medium text-lg">同名處理建議</h4>
+                                    <ul class="text-sm text-slate-400 space-y-2 list-disc pl-5">
+                                        <li>建議格式：姓名 + 識別碼（王小明 A023）</li>
+                                        <li>避免系統將同名視為加權名單</li>
+                                        <li>如需加權請直接重複輸入相同姓名</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold text-white flex items-center bg-slate-800/50 p-3 rounded-lg">
+                                <span class="w-1.5 h-6 gold-bg mr-4"></span> 二、抽獎邏輯設定教學
+                            </h3>
+                            <div class="space-y-8 pl-2">
+                                <div class="bg-slate-800/20 p-6 rounded-2xl border border-slate-800">
+                                    <h4 class="text-lg font-bold text-white mb-3">模式 A：單一中獎</h4>
+                                    <p class="text-sm text-slate-400 mb-4">適用：每位參加者僅有一次中獎機會</p>
+                                    <div class="text-xs text-slate-400 bg-slate-900/50 p-4 rounded-lg space-y-2">
+                                        <div><strong class="text-slate-200">名單處理：</strong>匯入後點擊「改為單一中獎(去重)」</div>
+                                        <div><strong class="text-slate-200">獎項設定：</strong>關閉「啟用權重邏輯」</div>
+                                        <div class="pt-2 mt-2 border-t border-slate-800">
+                                            <strong class="text-slate-200">說明：</strong>系統會自動合併重複名單，每人僅保留一筆資料，確保抽獎機率相同
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-800/20 p-6 rounded-2xl border border-slate-800">
+                                    <h4 class="text-lg font-bold text-white mb-3">模式 B：權重式中獎</h4>
+                                    <p class="text-sm text-slate-400 mb-4">適用：參與次數越多，中獎機率越高</p>
+                                    <div class="text-xs text-slate-400 bg-slate-900/50 p-4 rounded-lg space-y-2">
+                                        <div><strong class="text-slate-200">名單處理：</strong>直接匯入含重複姓名的名單</div>
+                                        <div><strong class="text-slate-200">獎項設定：</strong>開啟「啟用權重邏輯」</div>
+                                        <div class="pt-2 mt-2 border-t border-slate-800">
+                                            <strong class="text-slate-200">範例：</strong>王小明出現 5 次 → 擁有 5 倍中獎機率<br>
+                                            <strong class="text-slate-200">注意：</strong>同一獎項中，每人仍只能中獎一次
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-800/20 p-6 rounded-2xl border border-slate-800">
+                                    <h4 class="text-lg font-bold text-white mb-3">模式 C：階層式複合中獎</h4>
+                                    <p class="text-sm text-slate-400 mb-4">適用：大獎排他，小獎開放</p>
+                                    <div class="text-xs text-slate-400 bg-slate-900/50 p-4 rounded-lg space-y-3">
+                                        <div>
+                                            <strong class="text-slate-200">大獎設定：</strong>勾選「排除全場已得獎者」<br>
+                                            <span class="text-[11px] text-slate-500">→ 任何人只要中過任一獎項，即失去大獎資格</span>
+                                        </div>
+                                        <div>
+                                            <strong class="text-slate-200">普獎設定：</strong>取消勾選「排除全場已得獎者」+ 開啟「一鍵抽出名單」<br>
+                                            <span class="text-[11px] text-slate-500">→ 已中大獎者仍可參與普獎，但每人於普獎中僅中獎一次</span>
+                                        </div>
+                                        <div class="pt-2 mt-2 border-t border-slate-800">
+                                            <strong class="text-slate-200">建議流程：</strong>先抽大獎 → 再抽普獎<br>
+                                            <strong class="text-slate-200">實際案例：</strong>特等獎 1 名 + 普獎 50 名，確保分配公平
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-bold text-white flex items-center bg-slate-800/50 p-3 rounded-lg">
+                                <span class="w-1.5 h-6 gold-bg mr-4"></span> 三、操作流程與功能說明
+                            </h3>
+                            <div class="space-y-6 pl-2">
+                                <div class="bg-slate-800/20 p-6 rounded-2xl border border-slate-800">
+                                    <h4 class="text-lg font-bold text-white mb-4">標準作業流程</h4>
+                                    <div class="space-y-3 text-sm text-slate-400">
+                                        <div class="flex items-start gap-3">
+                                            <span class="gold-bg text-slate-900 px-2 py-0.5 rounded text-xs font-bold flex-shrink-0">步驟 1</span>
+                                            <span>進入「名單配置」頁面，貼上參與者名單並匯入</span>
+                                        </div>
+                                        <div class="flex items-start gap-3">
+                                            <span class="gold-bg text-slate-900 px-2 py-0.5 rounded text-xs font-bold flex-shrink-0">步驟 2</span>
+                                            <span>依需求點擊「改為單一中獎(去重)」或保留權重名單</span>
+                                        </div>
+                                        <div class="flex items-start gap-3">
+                                            <span class="gold-bg text-slate-900 px-2 py-0.5 rounded text-xs font-bold flex-shrink-0">步驟 3</span>
+                                            <span>進入「獎項管理」頁面，設定獎項名稱、人數與抽獎規則</span>
+                                        </div>
+                                        <div class="flex items-start gap-3">
+                                            <span class="gold-bg text-slate-900 px-2 py-0.5 rounded text-xs font-bold flex-shrink-0">步驟 4</span>
+                                            <span>返回首頁點擊「立即開獎」，選擇獎項開始抽選</span>
+                                        </div>
+                                        <div class="flex items-start gap-3">
+                                            <span class="gold-bg text-slate-900 px-2 py-0.5 rounded text-xs font-bold flex-shrink-0">步驟 5</span>
+                                            <span>完成後進入「中獎名單」頁面，匯出報表備份</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-800/20 p-6 rounded-2xl border border-slate-800">
+                                    <h4 class="text-lg font-bold text-white mb-4">重要功能說明</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-400">
+                                        <div class="bg-slate-900/50 p-4 rounded-lg">
+                                            <strong class="text-slate-200 block mb-2">🎲 單次抽獎 vs 一鍵抽獎</strong>
+                                            <ul class="space-y-1 list-disc pl-4">
+                                                <li>單次：每按一次抽一位，適合逐一公布</li>
+                                                <li>一鍵：瞬間抽出全部名額，適合批次公告</li>
+                                            </ul>
+                                        </div>
+                                        <div class="bg-slate-900/50 p-4 rounded-lg">
+                                            <strong class="text-slate-200 block mb-2">⚙️ 獎項設定三大開關</strong>
+                                            <ul class="space-y-1 list-disc pl-4">
+                                                <li>排除全場已得獎者：跨獎項排他</li>
+                                                <li>啟用權重邏輯：依名單重複次數加權</li>
+                                                <li>一鍵抽出名單：批次開獎模式</li>
+                                            </ul>
+                                        </div>
+                                        <div class="bg-slate-900/50 p-4 rounded-lg">
+                                            <strong class="text-slate-200 block mb-2">📋 測試模式建議</strong>
+                                            <ul class="space-y-1 list-disc pl-4">
+                                                <li>使用「載入測試數據」快速測試</li>
+                                                <li>完成測試後，至「中獎名單」頁面點擊「清除名單」</li>
+                                                <li>再重新匯入正式名單進行實際抽獎</li>
+                                            </ul>
+                                        </div>
+                                        <div class="bg-slate-900/50 p-4 rounded-lg">
+                                            <strong class="text-slate-200 block mb-2">💾 資料匯出注意事項</strong>
+                                            <ul class="space-y-1 list-disc pl-4">
+                                                <li>CSV 檔案包含時間、獎項、獲獎人</li>
+                                                <li>檔名自動加上日期標記</li>
+                                                <li>建議每場抽獎結束立即備份</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-amber-950/20 border border-amber-900/30 p-6 rounded-2xl">
+                                    <h4 class="text-amber-400 font-bold mb-3 flex items-center gap-2">
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                        常見錯誤與解決方式
+                                    </h4>
+                                    <div class="space-y-3 text-xs text-slate-400">
+                                        <div>
+                                            <strong class="text-amber-300">Q: 名單匯入後沒有顯示？</strong><br>
+                                            A: 檢查名單格式是否為「每行一筆」，且沒有空白行在開頭
+                                        </div>
+                                        <div>
+                                            <strong class="text-amber-300">Q: 為什麼有些人被標記「×2」、「×3」？</strong><br>
+                                            A: 這是權重標記，表示該姓名在名單中出現多次。若不需要權重，請點擊「改為單一中獎(去重)」
+                                        </div>
+                                        <div>
+                                            <strong class="text-amber-300">Q: 抽獎時顯示「抽獎池已空」？</strong><br>
+                                            A: 代表符合條件的參與者已全部抽完。檢查：(1) 獎項設定是否過於嚴格 (2) 參與人數是否足夠
+                                        </div>
+                                        <div>
+                                            <strong class="text-amber-300">Q: 如何確保抽獎公平性？</strong><br>
+                                            A: 系統使用 JavaScript 內建的隨機函數，每次抽選皆為獨立事件。建議正式抽獎前先以測試模式驗證規則設定
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-8 border-t border-slate-800">
+                            <h3 class="text-lg font-bold text-slate-300 mb-4">四、免責與使用提醒</h3>
+                            <ul class="text-xs text-slate-500 space-y-3 leading-6">
+                                <li>● 本系統為活動輔助工具，資料僅暫存於瀏覽器中，無雲端備份功能</li>
+                                <li>● 抽獎結果將依使用者設定與操作流程產生，系統不對結果公平性提供保證</li>
+                                <li>● 使用者請自行留意資料匯出、個資保護及相關法規遵循</li>
+                                <li>● 建議於正式抽獎前，使用測試數據驗證所有設定與流程</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 獲獎彈窗 -->
+        <div v-if="showWinModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/95 backdrop-blur-md animate-fadeIn">
+            <div class="bg-slate-900 p-20 rounded-[60px] gold-border text-center shadow-2xl relative overflow-hidden max-w-2xl w-full">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#c4a052] to-transparent"></div>
+                <div class="text-slate-400 tracking-[0.4em] mb-4 text-sm font-light uppercase">CONGRATULATIONS</div>
+                <h2 class="text-4xl font-bold gold-text mb-2">{{ lastWinnerPrize }}</h2>
+                <div class="text-6xl md:text-8xl font-light tracking-[0.3em] my-12 text-white">{{ lastWinnerName }}</div>
+                <button @click="closeWinModal" class="px-16 py-4 bg-slate-800 hover:bg-slate-700 rounded-full text-slate-300 transition-all font-light tracking-widest border border-slate-700">
+                    確認並返回
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        let audioCtx = null;
+        const playSound = (freq, type, duration, vol = 0.1) => {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {
+                console.warn('音效播放失敗', e);
+            }
+        };
+
+        createApp({
+            setup() {
+                const currentTab = ref('home');
+                const systemTitle = ref('品牌精英會 - 數位抽獎管理系統');
+                const homeConfig = ref({
+                    bgUrl: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&q=80&w=2070',
+                    subtitle: '2025 年度表揚大會',
+                    subtitleColor: '#ffffff',
+                    mainTitle: '榮耀時刻・幸運之巔',
+                    mainTitleColor: '#ffffff'
+                });
+
+                const rawInput = ref('');
+                const participants = ref([]);
+                const prizes = ref([
+                    { id: 1, name: '年度風雲大獎', count: 1, excludeWinners: true, useWeight: true, oneClickDraw: false },
+                    { id: 2, name: '普獎 (限每人一次)', count: 10, excludeWinners: false, useWeight: false, oneClickDraw: true }
+                ]);
+                const allWinners = ref([]);
+                const currentPrize = ref(null);
+                const isRolling = ref(false);
+                const rollingOffset = ref(0);
+                const rollingDisplay = ref(['READY']);
+                const showWinModal = ref(false);
+                const lastWinnerName = ref('');
+                const lastWinnerPrize = ref('');
+
+                const isAllPrizesFinished = computed(() => {
+                    if (prizes.value.length === 0) return false;
+                    return prizes.value.every(p => {
+                        const winnerCount = allWinners.value.filter(w => w.prize === p.name).length;
+                        return winnerCount >= p.count;
+                    });
+                });
+
+                const processInput = () => {
+                    const lines = rawInput.value.split(/\n/).map(i => i.trim()).filter(i => i !== "");
+                    if (lines.length === 0) {
+                        alert('請先輸入名單！');
+                        return;
+                    }
+                    if (lines.length > 10000) {
+                        if (!confirm(`名單共 ${lines.length} 筆，超過建議上限 10,000 筆，可能影響效能。是否繼續？`)) {
+                            return;
+                        }
+                    }
+                    const map = {};
+                    participants.value.forEach(p => map[p.name] = p.weight);
+                    lines.forEach(name => { map[name] = (map[name] || 0) + 1; });
+                    participants.value = Object.keys(map).map(name => ({ name: name, weight: map[name] }));
+                    rawInput.value = '';
+                    alert(`成功匯入 ${participants.value.length} 筆名單！`);
+                };
+
+                const loadMockData = () => {
+                    rawInput.value = "林曉明 (VIP)\n林曉明 (VIP)\n陳美玲\n王小芬\n張大衛\n趙先生\n孫小姐\n李經理\n周大通";
+                    processInput();
+                };
+
+                const resetParticipants = () => { 
+                    if (participants.value.length === 0) return;
+                    if (confirm('確定要清空所有參與名單？此操作無法復原。')) {
+                        participants.value = []; 
+                    }
+                };
+
+                const removePerson = (i) => participants.value.splice(i, 1);
+
+                const removePrize = (index) => { 
+                    if (prizes.value.length > 1) {
+                        if (confirm('確定要刪除此獎項？')) {
+                            prizes.value.splice(index, 1);
+                        }
+                    } else {
+                        alert('至少需保留一個獎項！');
+                    }
+                };
+                
+                const addPrize = () => {
+                    const newPrize = { 
+                        id: Date.now(), 
+                        name: '新獎項', 
+                        count: 1, 
+                        excludeWinners: true, 
+                        useWeight: false,
+                        oneClickDraw: false
+                    };
+                    prizes.value.push(newPrize);
+                };
+
+                const selectPrize = (p) => {
+                    currentPrize.value = p;
+                    rollingDisplay.value = ['STANDBY'];
+                    rollingOffset.value = 0;
+                };
+
+                const handleBack = () => {
+                    if (currentPrize.value) {
+                        currentPrize.value = null; 
+                    } else {
+                        currentTab.value = 'home'; 
+                    }
+                };
+
+                const getPrizeWinnerCount = (name) => allWinners.value.filter(w => w.prize === name).length;
+                const winnersOfCurrentPrize = computed(() => allWinners.value.filter(w => w.prize === currentPrize.value?.name));
+                const isPrizeFinished = computed(() => currentPrize.value && getPrizeWinnerCount(currentPrize.value.name) >= currentPrize.value.count);
+
+                const drawOne = (p) => {
+                    let pool = [...participants.value];
+                    if (p.excludeWinners) {
+                        const allWinnerNames = allWinners.value.map(w => w.name);
+                        pool = pool.filter(person => !allWinnerNames.includes(person.name));
+                    }
+                    const curWinnerNames = allWinners.value.filter(w => w.prize === p.name).map(w => w.name);
+                    pool = pool.filter(person => !curWinnerNames.includes(person.name));
+                    if (pool.length === 0) return null;
+                    let virtualPool = [];
+                    pool.forEach(person => {
+                        const rawWeight = p.useWeight ? person.weight : 1;
+                        const w = Math.max(1, Math.min(100, rawWeight));
+                        for(let i=0; i<w; i++) virtualPool.push(person.name);
+                    });
+                    return virtualPool[Math.floor(Math.random() * virtualPool.length)];
+                };
+
+                const initAudio = () => {
+                    if (!audioCtx) {
+                        try {
+                            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        } catch(e) {
+                            console.warn('音效初始化失敗', e);
+                        }
+                    }
+                };
+
+                const startAutoDraw = async () => {
+                    if (isRolling.value || isPrizeFinished.value || participants.value.length === 0) return;
+                    if (getPrizeWinnerCount(currentPrize.value.name) >= currentPrize.value.count) {
+                        alert('此獎項名額已抽完！');
+                        return;
+                    }
+                    
+                    initAudio();
+                    isRolling.value = true;
+                    
+                    if (currentPrize.value.oneClickDraw) {
+                        const remaining = currentPrize.value.count - getPrizeWinnerCount(currentPrize.value.name);
+                        const winners = [];
+                        
+                        for(let i=0; i<remaining; i++) {
+                            const w = drawOne(currentPrize.value);
+                            if (w) {
+                                winners.push(w);
+                                allWinners.value.unshift({ 
+                                    name: w, 
+                                    prize: currentPrize.value.name, 
+                                    time: Date.now() + i
+                                });
+                            }
+                        }
+
+                        if (winners.length === 0) { 
+                            alert('抽獎池已空，無法抽出更多獲獎者！');
+                            isRolling.value = false; 
+                            return; 
+                        }
+
+                        let visualPool = participants.value.map(p => p.name);
+                        const totalSteps = 20;
+                        let visualList = [];
+                        for (let i = 0; i < totalSteps; i++) {
+                            visualList.push(visualPool[Math.floor(Math.random() * visualPool.length)]);
+                        }
+                        visualList.push(winners.length > 1 ? `✓ 已抽出 ${winners.length} 位` : winners[0]);
+                        rollingDisplay.value = visualList;
+
+                        let step = 0;
+                        const animate = () => {
+                            if (step < rollingDisplay.value.length) {
+                                rollingOffset.value = step * 224;
+                                playSound(200 + (step * 5), 'sine', 0.1, 0.03);
+                                step++;
+                                setTimeout(animate, 100);
+                            } else {
+                                isRolling.value = false;
+                                if (winners.length === 1) {
+                                    lastWinnerName.value = winners[0];
+                                } else {
+                                    lastWinnerName.value = `共 ${winners.length} 位獲獎`;
+                                }
+                                lastWinnerPrize.value = currentPrize.value.name;
+                                showWinModal.value = true;
+                                playSound(523, 'triangle', 0.5);
+                            }
+                        };
+                        animate();
+                    } else {
+                        const winner = drawOne(currentPrize.value);
+                        if (!winner) { alert("抽獎池已空！"); isRolling.value = false; return; }
+                        let visualPool = participants.value.map(p => p.name);
+                        const totalSteps = 20; 
+                        let visualList = [];
+                        for (let i = 0; i < totalSteps; i++) {
+                            visualList.push(visualPool[Math.floor(Math.random() * visualPool.length)]);
+                        }
+                        visualList.push(winner);
+                        rollingDisplay.value = visualList;
+                        let step = 0;
+                        const animate = () => {
+                            if (step < rollingDisplay.value.length) {
+                                rollingOffset.value = step * 224;
+                                playSound(200 + (step * 5), 'sine', 0.1, 0.03);
+                                step++;
+                                setTimeout(animate, 100);
+                            } else {
+                                isRolling.value = false;
+                                lastWinnerName.value = winner;
+                                lastWinnerPrize.value = currentPrize.value.name;
+                                allWinners.value.unshift({ name: winner, prize: currentPrize.value.name, time: Date.now() });
+                                showWinModal.value = true;
+                                playSound(523, 'triangle', 0.5);
+                            }
+                        };
+                        animate();
+                    }
+                };
+
+                const closeWinModal = () => { showWinModal.value = false; };
+
+                const clearAllWinners = () => {
+                    if (allWinners.value.length === 0) return;
+                    if (confirm('確定要清除所有中獎紀錄？此操作無法復原。\n\n⚠️ 注意：清除後將無法復原，建議先匯出報表備份。')) {
+                        allWinners.value = [];
+                        alert('中獎紀錄已清除！');
+                    }
+                };
+
+                return {
+                    currentTab, systemTitle, homeConfig, rawInput, participants, prizes, allWinners,
+                    processInput, loadMockData, resetParticipants, removePerson, addPrize, removePrize, selectPrize, currentPrize,
+                    getPrizeWinnerCount, isRolling, rollingOffset, rollingDisplay, startAutoDraw, handleBack,
+                    winnersOfCurrentPrize, isPrizeFinished, showWinModal, lastWinnerName, lastWinnerPrize,
+                    closeWinModal, isAllPrizesFinished, clearAllWinners,
+                    hasDuplicates: computed(() => participants.value.some(p => p.weight > 1)),
+                    clearDuplicates: () => { 
+                        if (participants.value.some(p => p.weight > 1)) {
+                            if (confirm('確定要合併重複名單？所有權重將重置為 1，此操作無法復原。')) {
+                                participants.value = participants.value.map(p => ({ name: p.name, weight: 1 }));
+                                alert('已成功合併重複名單！');
+                            }
+                        }
+                    },
+                    formatTime: (ts) => new Date(ts).toLocaleTimeString(),
+                    exportCSV: () => {
+                        if (allWinners.value.length === 0) {
+                            alert('目前無中獎紀錄可匯出！');
+                            return;
+                        }
+                        let csv = "data:text/csv;charset=utf-8,\uFEFF時間,獎項,獲獎人\n";
+                        allWinners.value.forEach(w => {
+                            const safeName = w.name.replace(/^[=+\-@]/, "'                                        <li>請務必於抽獎完成後立");
+                            csv += `${new Date(w.time).toLocaleString()},${w.prize},${safeName}\n`;
+                        });
+                        const link = document.createElement("a");
+                        link.href = encodeURI(csv);
+                        link.download = `抽獎報告_${new Date().toISOString().slice(0,10)}.csv`;
+                        link.click();
+                        alert('報表已成功匯出！');
+                    }
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
